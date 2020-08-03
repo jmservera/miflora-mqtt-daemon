@@ -354,6 +354,8 @@ while True:
                 flora['name_pretty'], flora['mac'], flora['stats']['success']/flora['stats']['count']
                 ), error = True, sd_notify = True)
             print()
+            if reporting_mode == 'homeassistant-mqtt':
+                print_line('Publishing to MQTT topic "{}/sensor/{}/state"'.format(base_topic, flora_name).lower())
             continue
         else:
             flora['stats']['success'] = flora['stats']['success'] + 1
