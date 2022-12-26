@@ -2,10 +2,12 @@
 """
 
 import asyncio
+from datetime import date
 from collections import OrderedDict
 from bleak import BleakScanner, BLEDevice, AdvertisementData
 from . import print_line, reporting_mode, sd_notifier, flores
 from .mqtt import start_mqtt, found_mqtt, send_mqtt
+from xiaomi_ble import XiaomiBluetoothDeviceData
 
 devices = {}
 
@@ -23,11 +25,14 @@ async def print_device(device: BLEDevice, data: AdvertisementData):
                 found_mqtt(f'{flora["name_pretty"]}@{flora["location_pretty"]}')
                 print_line(f"*** Adding device: {device}", warning=True)
                 flores[device.address].poller = 'bleak'
+                flores["detected"] = date.today()
                 print_line(f"*** Added device: {device}", warning=True)
         if not flores.get(device.address) is None:
+            flores["last_seen"] = date.today()
             flores[device.address].data = data
-            print_line(f"Data retrieved for {device.address}")
-            send_mqtt(flores[device.address].name_pretty)
+            btData=XiaomiBluetoothDeviceData(data)
+            print_line(f"Data retrieved for {device.address}: {btData}")
+            send_mqtt(flores[device.address]["name_pretty"])
 
 
 async def main():
