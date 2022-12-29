@@ -68,6 +68,8 @@ async def print_device(device: BLEDevice, data: AdvertisementData):
 async def main():
     """ Main entry point of the app """
 
+    stop_event = asyncio.Event()
+
     if reporting_mode in ['mqtt-json', 'mqtt-smarthome', 'homeassistant-mqtt',
                           'thingsboard-json', 'wirenboard-mqtt']:
         start_mqtt()
@@ -75,24 +77,21 @@ async def main():
     sd_notifier.notify('READY=1')
 
     scanner_kwargs: dict[str, Any] = {"detection_callback": print_device}
-    scanner_kwargs["scanning_mode"] = "passive"
+    #  scanner_kwargs["scanning_mode"] = "passive"
     if platform.system() == "Linux":
         if scanner_kwargs["scanning_mode"] == "passive":
             scanner_kwargs["bluez"] = PASSIVE_SCANNER_ARGS
 
-    scanner = BleakScanner(**scanner_kwargs)
-
-
-    print_line("Starting BLE passive scanner...")
-    await scanner.start()
-    print_line("BLE passive scanner started.")
-    try:
-        while True:
-            await asyncio.sleep(1)
-    except KeyboardInterrupt:
-        print_line("Stopping scanner...")
-        await scanner.stop()
-        print_line("Scanner stopped...")
+    async with BleakScanner(**scanner_kwargs) as scanner:        
+        print_line("Starting BLE passive scanner...")
+        await scanner.start()
+        print_line("BLE passive scanner started.")
+        try:
+            await stop_event.wait()
+        except KeyboardInterrupt:
+            print_line("Stopping scanner...")
+            await scanner.stop()
+            print_line("Scanner stopped...")
 
 
 if __name__ == "__main__":
