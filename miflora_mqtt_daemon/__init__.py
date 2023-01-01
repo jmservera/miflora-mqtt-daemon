@@ -128,7 +128,7 @@ if reporting_mode == 'wirenboard-mqtt' and base_topic:
 
 print_line('Configuration accepted', console=False, sd_notify=True)
 
-flores = OrderedDict()
+flores: OrderedDict[OrderedDict] = OrderedDict()
 
 for [name, mac] in config['Sensors'].items():
     EXPRESSION = r'[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:' + \

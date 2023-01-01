@@ -4,7 +4,6 @@ https://github.com/Ernst79/bleparser/blob/c42ae922e1abed2720c7fac993777e1bd59c0c
 MIT License applies.
 """
 from __future__ import annotations
-
 import datetime
 import logging
 import math
@@ -12,10 +11,6 @@ import struct
 import sys
 from enum import Enum
 from typing import Any
-
-from bleak import BleakClient
-from bleak.backends.device import BLEDevice
-# from bleak_retry_connector import establish_connection
 from bluetooth_data_tools import short_address
 from bluetooth_sensor_state_data import BluetoothData
 from Cryptodome.Cipher import AES
@@ -26,7 +21,8 @@ from sensor_state_data import (
     SensorUpdate,
     Units,
 )
-
+from bleak import BleakClient
+from bleak.backends.device import BLEDevice
 from .const import (
     CHARACTERISTIC_BATTERY,
     SERVICE_HHCCJCY10,
@@ -34,6 +30,8 @@ from .const import (
     TIMEOUT_1DAY,
 )
 from .devices import DEVICE_TYPES
+if sys.platform == "Linux":
+    from bleak_retry_connector import establish_connection
 
 _LOGGER = logging.getLogger(__name__)
 
