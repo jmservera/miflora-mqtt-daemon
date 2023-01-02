@@ -1049,7 +1049,7 @@ class XiaomiBluetoothDeviceData(BluetoothData):
         self.last_service_info: BluetoothServiceInfo | None = None
 
         # Used to announce firmware version
-        self.firmware: str = None
+        self.firmware: str = ""
 
     def supported(self, data: BluetoothServiceInfo) -> bool:
         if not super().supported(data):
