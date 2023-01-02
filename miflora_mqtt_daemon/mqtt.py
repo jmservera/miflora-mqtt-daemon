@@ -6,8 +6,6 @@ import ssl
 import json
 from time import localtime, sleep, strftime
 import paho.mqtt.client as mqtt
-from miflora.miflora_poller import (MI_BATTERY, MI_CONDUCTIVITY, MI_LIGHT,
-                                    MI_MOISTURE, MI_TEMPERATURE)
 from . import (print_line,
                reporting_mode,
                config,
@@ -15,6 +13,11 @@ from . import (print_line,
                #  miflora_cache_timeout,
                sleep_period)
 
+MI_TEMPERATURE = "temperature"
+MI_LIGHT = "illuminance"
+MI_MOISTURE = "moisture"
+MI_CONDUCTIVITY = "conductivity"
+MI_BATTERY = "battery"
 
 parameters = OrderedDict([
     (MI_LIGHT, dict(name="LightIntensity", name_pretty='Sunlight Intensity', typeformat='%d',
@@ -112,31 +115,6 @@ def send_mqtt(flora_name: str, flora: OrderedDict):
     # flora['poller']._cache = None
     # flora['poller']._last_read = None
     flora['stats']['count'] += 1
-    # print_line('Retrieving data from sensor "{}" ...'.format(flora['name_pretty']))
-    # while attempts != 0 and not flora['poller']._cache:
-    #     try:
-    #         flora['poller'].fill_cache()
-    #         flora['poller'].parameter_value(MI_LIGHT)
-    #     except (IOError, BluetoothBackendException, BTLEException, RuntimeError, BrokenPipeError) as e:
-    #         attempts -= 1
-    #         if attempts > 0:
-    #             if len(str(e)) > 0:
-    #                 print_line('Retrying due to exception: {}'.format(e), error=True)
-    #             else:
-    #                 print_line('Retrying ...', warning=True)
-    #         flora['poller']._cache = None
-    #         flora['poller']._last_read = None
-
-    # if not flora['poller']._cache:
-    #     flora['stats']['failure'] += 1
-    #     if reporting_mode == 'mqtt-homie':
-    #         mqtt_clients[flora_name.lower()].publish('{}/{}/$state'.format(base_topic, flora_name.lower()), 'disconnected', 1, True)
-    #     print_line('Failed to retrieve data from Mi Flora sensor "{}" ({}), success rate: {:.0%}'.format(
-    #         flora['name_pretty'], flora['mac'], flora['stats']['success']/flora['stats']['count']
-    #         ), error = True, sd_notify = True)
-    #     print()
-    #     continue
-    # else:
     flora['stats']['success'] += 1
 
     # for param, _ in parameters.items():
@@ -195,7 +173,6 @@ def send_mqtt(flora_name: str, flora: OrderedDict):
         print('Data for "{}": {}'.format(flora_name, json.dumps(data)))
     else:
         raise NameError('Unexpected reporting_mode.')
-    print()
 
 
 mqtt_clients: dict[str, mqtt.Client] = dict()
@@ -328,7 +305,7 @@ def found_mqtt(flora_name: str, flora: OrderedDict):
                     'manufacturer' : 'Xiaomi',
                     'name' : flora_name,
                     'model' : 'MiFlora Plant Sensor (HHCCJCY01)',
-                    'sw_version': flora['firmware']
+                    'sw_version': flora.data.firmware
             }
             payload['expire_after'] = str(int(sleep_period * 1.5))
             MQTT_CLIENT.publish(discovery_topic, json.dumps(payload), 1, True)

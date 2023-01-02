@@ -41,84 +41,50 @@ def get_time() -> float:
     return time.monotonic()
 
 
-async def print_device(device: BLEDevice, data: AdvertisementData):
-    """ Print device information """
+async def process_device(device: BLEDevice, data: AdvertisementData):
+    """ Use device information for announcing it via mqtt."""
 
     if device.name is not None and len(device.name) > 0:  # == "Flower care":
         already_found = devices.get(device.address)
         if already_found is None:
             devices[device.address] = device
-            print_line(f"*** Found device: {device}", warning=True)
             if not flores.get(device.address) is None:
                 flora = flores[device.address]
-                print_line(f"*** Adding device: {device}", warning=True)
-                flora.poller = 'bleak'
-                flora.detected = date.today()
-                flora.last_seen = date.today()
+                print_line(f"Adding device: {device}")
+                flora["poller"] = 'bleak'
                 flora.data: XiaomiBluetoothDeviceData = XiaomiBluetoothDeviceData()
                 found_mqtt(flora["name_pretty"], flora)
-                print_line(f"*** Added device: {device}", warning=True)
+                print_line(f"Added device: {device}")
+            elif device.name == "Flower care":
+                print_line(f"Device {device} found but not configured", Warning=True, sd_notify=True)
+            else:
+                print_line(f"Unknown device announced: {device}")
 
         if not flores.get(device.address) is None:
             flora = flores[device.address]
             service_info = bti.from_device_and_advertisement_data(device, data, 'bleak',
-                                                                  datetime.now().timestamp(),
+                                                                  get_time(),
                                                                   True)
-            print_line(f"uuids: {data.service_uuids}")
             sensor_update = flora.data.update(service_info)
             if len(sensor_update.entity_values):
                 last_poll = None
-                if flora["last_poll"] is not None:
+
+                if flora.get("last_poll") is not None:
                     last_poll = get_time()-flora["last_poll"]
                 if flora.data.poll_needed(service_info, last_poll):
+                    old_fw = flora.data.firmware
                     sensor_update = await flora.data.async_poll(device)
                     if len(sensor_update.entity_values):
                         flora["last_poll"] = get_time()
+                        if(old_fw!=flora.data.firmware):
+                            # when we get the fw version update the 
+                            # mqtt announcement
+                            found_mqtt(flora["name_pretty"], flora)
                 send_mqtt(flora["name_pretty"], flora)
-                flora.last_seen = date.today()
-    else:
-        if unnamed_devices.get(device.address) is None:
-            if not flores.get(device.address) is None:
-                print_line(f"Found device without name for {flores[device.address]['name_pretty']}: " +
-                           "{device.address}", warning=True)
-                service_info = bti.from_device_and_advertisement_data(device, data, 'bleak',
-                                                                      datetime.now().timestamp(),
-                                                                      True)
-                flores[device.address].data.update(service_info)
-                send_mqtt("unknown", flores[device.address])
-            else:  # try to parse something
-                service_info = bti.from_device_and_advertisement_data(device, data, 'bleak',
-                                                                      datetime.now().timestamp(),
-                                                                      True)
-                print_line(f"Found new device without name: {service_info.manufacturer} " +
-                           f"name:{service_info.name} address:{service_info.address} " +
-                           f"rssi:{service_info.rssi} connectabe: {service_info.connectable} uuids: " +
-                           f"{service_info.service_uuids}")
-                if len(service_info.service_uuids) > 0:
-                    if flores.get(device.address) is None:
-                        mifl = OrderedDict()
-                        mifl["stats"] = {"count": 0, "success": 0}
-                        mifl["name_pretty"] = "unknown"
-                        mifl.data = XiaomiBluetoothDeviceData()
-                        flores[device.address] = mifl
-                    else:
-                        mifl = flores[device.address]
-                    sensor_update = mifl.data.update(service_info)
-                    if len(sensor_update.entity_values):
-                        last_poll = None
-                        if mifl["last_poll"] is not None:
-                            last_poll = get_time()-mifl["last_poll"]
-                        if mifl.data.poll_needed(service_info, last_poll):
-                            sensor_update = await mifl.data.async_poll(device)
-                            if len(sensor_update.entity_values):
-                                mifl["last_poll"] = get_time()
-                        send_mqtt("unknown", flores[device.address])
-            unnamed_devices[device.address] = device
 
 
 async def main():
     """ Main entry point of the app """
-
     stop_event = asyncio.Event()
 
     if reporting_mode in ['mqtt-json', 'mqtt-smarthome', 'homeassistant-mqtt',
@@ -127,22 +93,22 @@ async def main():
 
     sd_notifier.notify('READY=1')
 
-    scanner_kwargs: dict[str, Any] = {"detection_callback": print_device}
+    scanner_kwargs: dict[str, Any] = {"detection_callback": process_device}
     scanner_kwargs["scanning_mode"] = "passive"
     if platform.system() == "Linux":
         if scanner_kwargs["scanning_mode"] == "passive":
             scanner_kwargs["bluez"] = PASSIVE_SCANNER_ARGS
 
     async with BleakScanner(**scanner_kwargs) as scanner:
-        print_line("Starting BLE passive scanner...")
+        print_line("Starting BLE passive scanner...", sd_notifier=True)
         await scanner.start()
-        print_line("BLE passive scanner started.")
+        print_line("BLE passive scanner started.", sd_notifier=True)
         try:
             await stop_event.wait()
-        except KeyboardInterrupt:
-            print_line("Stopping scanner...")
+        finally:
+            print_line("Stopping scanner...", sd_notifier=True)
             await scanner.stop()
-            print_line("Scanner stopped...")
+            print_line("Scanner stopped...", sd_notifier=True)
 
 
 if __name__ == "__main__":

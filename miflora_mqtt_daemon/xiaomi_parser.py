@@ -9,6 +9,7 @@ import logging
 import math
 import struct
 import sys
+import platform
 from enum import Enum
 from typing import Any
 from bluetooth_data_tools import short_address
@@ -30,7 +31,7 @@ from .const import (
     TIMEOUT_1DAY,
 )
 from .devices import DEVICE_TYPES
-if sys.platform == "Linux":
+if platform.system() == "Linux":
     from bleak_retry_connector import establish_connection
 
 _LOGGER = logging.getLogger(__name__)
@@ -1017,6 +1018,9 @@ class XiaomiBluetoothDeviceData(BluetoothData):
         super().__init__()
         self.bindkey = bindkey
 
+        # True while polling
+        self.polling = False
+
         # Data that we know how to parse but don't yet map to the SensorData model.
         self.unhandled: dict[str, Any] = {}
 
@@ -1043,6 +1047,9 @@ class XiaomiBluetoothDeviceData(BluetoothData):
         # We keep this to help in reauth flows where we want to reprocess and old
         # value with a new bindkey.
         self.last_service_info: BluetoothServiceInfo | None = None
+
+        # Used to announce firmware version
+        self.firmware: str = None
 
     def supported(self, data: BluetoothServiceInfo) -> bool:
         if not super().supported(data):
@@ -1263,6 +1270,7 @@ class XiaomiBluetoothDeviceData(BluetoothData):
             payload = data[i:]
 
         self.set_device_sw_version(firmware)
+        self.firmware = firmware
 
         if payload is not None:
             sinfo += ", Object data: " + payload.hex()
@@ -1416,18 +1424,24 @@ class XiaomiBluetoothDeviceData(BluetoothData):
         Poll the device to retrieve any values we can't get from passive listening.
         """
         if self.device_id == 0x0098:
-            client = await establish_connection(
-                BleakClient, ble_device, ble_device.address
-            )
-            try:
-                battery_char = client.services.get_characteristic(
-                    CHARACTERISTIC_BATTERY
-                )
-                payload = await client.read_gatt_char(battery_char)
-            finally:
-                await client.disconnect()
+            if not self.polling:
+                self.polling = True
+                try:
+                    client = await establish_connection(
+                        BleakClient, ble_device, ble_device.address
+                    )
+                    try:
+                        battery_char = client.services.get_characteristic(
+                            CHARACTERISTIC_BATTERY
+                        )
+                        payload = await client.read_gatt_char(battery_char)
+                    finally:
+                        await client.disconnect()
 
-            self.set_device_sw_version(payload[2:].decode("utf-8"))
-            self.update_predefined_sensor(SensorLibrary.BATTERY__PERCENTAGE, payload[0])
+                    self.set_device_sw_version(payload[2:].decode("utf-8"))
+                    self.firmware = payload[2:].decode("utf-8")  # TODO: find the right way
+                    self.update_predefined_sensor(SensorLibrary.BATTERY__PERCENTAGE, payload[0])
+                finally:
+                    self.polling = False
 
         return self._finish_update()
