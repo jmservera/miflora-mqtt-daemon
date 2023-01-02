@@ -157,7 +157,6 @@ for [name, mac] in config['Sensors'].items():
     flora['location_clean'] = location_clean
     flora['location_pretty'] = location_pretty
     flora['stats'] = {"count": 0, "success": 0, "failure": 0}
-    flora['firmware'] = "0.0.0"
 
-    flores[mac] = flora
+    flores[mac.upper()] = flora
     WHITELIST = True  # Allows only listed sensors to be used

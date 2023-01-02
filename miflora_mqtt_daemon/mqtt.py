@@ -136,7 +136,7 @@ def send_mqtt(flora_name: str, flora: OrderedDict):
         MQTT_CLIENT.publish('{}'.format(base_topic), json.dumps(data))
         sleep(0.5) # some slack for the publish roundtrip and callback function
     elif reporting_mode == 'homeassistant-mqtt':
-        print_line('Publishing to MQTT topic "{}/sensor/{}/state"'.format(base_topic, flora_name.lower()))
+        #  TODO: use logger print_line('Publishing to MQTT topic "{}/sensor/{}/state"'.format(base_topic, flora_name.lower()))
         MQTT_CLIENT.publish('{}/sensor/{}/state'.format(base_topic, flora_name.lower()), json.dumps(data), retain=True)
         sleep(0.5) # some slack for the publish roundtrip and callback function
     elif reporting_mode == 'gladys-mqtt':

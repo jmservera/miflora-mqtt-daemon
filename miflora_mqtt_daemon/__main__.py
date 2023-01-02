@@ -50,7 +50,7 @@ async def process_device(device: BLEDevice, data: AdvertisementData):
             devices[device.address] = device
             if not flores.get(device.address) is None:
                 flora = flores[device.address]
-                print_line(f"Adding device: {device}")
+                print_line(f"Adding device: {device.address} {device.name}")
                 flora["poller"] = 'bleak'
                 flora.data: XiaomiBluetoothDeviceData = XiaomiBluetoothDeviceData()
                 found_mqtt(flora["name_pretty"], flora)
