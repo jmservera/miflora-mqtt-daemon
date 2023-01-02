@@ -121,6 +121,8 @@ def send_mqtt(flora_name: str, flora: OrderedDict):
     #     data[param] = flora['poller'].parameter_value(param)
     # print_line('Result: {}'.format(json.dumps(data)))
     data = {}
+    for param, _ in parameters.items():
+        data[param] = 0
     for key, value in flora.data._sensor_values.items():
         data[key.key] = value.native_value
 
