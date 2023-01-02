@@ -118,10 +118,10 @@ if reporting_mode not in ['mqtt-json', 'mqtt-homie', 'json', 'mqtt-smarthome',
                'value', error=True, sd_notify=True)
     sys.exit(1)
 else:
-    print_line('Reporting mode: ' + reporting_mode)
+    print_line('Reporting mode: ' + reporting_mode, sd_notify=True)
 if not config['Sensors']:
     print_line('No sensors found in configuration file "config.ini". All ' +
-               'detected sensors will be allowed.', warning=True)
+               'detected sensors will be allowed.', warning=True, sd_notify=True)
 if reporting_mode == 'wirenboard-mqtt' and base_topic:
     print_line('Parameter "base_topic" ignored for "reporting_method = ' +
                'wirenboard-mqtt"', warning=True, sd_notify=True)
