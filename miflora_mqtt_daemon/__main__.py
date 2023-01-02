@@ -100,15 +100,15 @@ async def main():
             scanner_kwargs["bluez"] = PASSIVE_SCANNER_ARGS
 
     async with BleakScanner(**scanner_kwargs) as scanner:
-        print_line("Starting BLE passive scanner...", sd_notifier=True)
+        print_line("Starting BLE passive scanner...", sd_notify=True)
         await scanner.start()
-        print_line("BLE passive scanner started.", sd_notifier=True)
+        print_line("BLE passive scanner started.", sd_notify=True)
         try:
             await stop_event.wait()
         finally:
-            print_line("Stopping scanner...", sd_notifier=True)
+            print_line("Stopping scanner...", sd_notify=True)
             await scanner.stop()
-            print_line("Scanner stopped...", sd_notifier=True)
+            print_line("Scanner stopped...", sd_notify=True)
 
 
 if __name__ == "__main__":

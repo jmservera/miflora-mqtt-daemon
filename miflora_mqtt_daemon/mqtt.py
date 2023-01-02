@@ -285,7 +285,7 @@ def found_mqtt(flora_name: str, flora: OrderedDict):
         sleep(0.5) # some slack for the publish roundtrip and callback function
         print()
     elif reporting_mode == 'homeassistant-mqtt':
-        print_line('Announcing Mi Flora devices to MQTT broker for auto-discovery ...')
+        print_line(f'Announcing Mi Flora device {flora_name} to MQTT broker for auto-discovery', sd_notify=True)
         state_topic = '{}/sensor/{}/state'.format(base_topic, flora_name.lower())
         for [sensor, params] in parameters.items():
             discovery_topic = 'homeassistant/sensor/{}/{}/config'.format(flora_name.lower(), sensor)
