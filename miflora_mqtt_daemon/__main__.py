@@ -56,7 +56,7 @@ async def process_device(device: BLEDevice, data: AdvertisementData):
                 found_mqtt(flora["name_pretty"], flora)
                 print_line(f"Added device: {device}")
             elif device.name == "Flower care":
-                print_line(f"Device {device} found but not configured", Warning=True, sd_notify=True)
+                print_line(f"Device {device} found but not configured", warning=True, sd_notify=True)
             else:
                 print_line(f"Unknown device announced: {device}")
 
