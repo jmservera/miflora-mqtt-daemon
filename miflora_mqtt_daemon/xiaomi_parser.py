@@ -9,7 +9,6 @@ import logging
 import math
 import struct
 import sys
-import platform
 from enum import Enum
 from typing import Any
 from bluetooth_data_tools import short_address
@@ -24,6 +23,7 @@ from sensor_state_data import (
 )
 from bleak import BleakClient
 from bleak.backends.device import BLEDevice
+from bleak_retry_connector import establish_connection
 from .const import (
     CHARACTERISTIC_BATTERY,
     SERVICE_HHCCJCY10,
@@ -31,11 +31,8 @@ from .const import (
     TIMEOUT_1DAY,
 )
 from .devices import DEVICE_TYPES
-if platform.system() == "Linux":
-    from bleak_retry_connector import establish_connection
 
 _LOGGER = logging.getLogger(__name__)
-
 
 class EncryptionScheme(Enum):
 
@@ -1439,7 +1436,8 @@ class XiaomiBluetoothDeviceData(BluetoothData):
                         await client.disconnect()
 
                     self.set_device_sw_version(payload[2:].decode("utf-8"))
-                    self.firmware = payload[2:].decode("utf-8")  # TODO: find the right way
+                    # TODO: find the right way to set the firmware version value
+                    self.firmware = payload[2:].decode("utf-8")
                     self.update_predefined_sensor(SensorLibrary.BATTERY__PERCENTAGE, payload[0])
                 finally:
                     self.polling = False

@@ -1,33 +1,18 @@
 """ Description: Main entry point for the miflora-mqtt-daemon
 """
-from collections import OrderedDict
 import sys
 import time
 from typing import Any
 import asyncio
 import platform
-from datetime import date, datetime
 from home_assistant_bluetooth.models import BluetoothServiceInfoBleak as bti
 from bleak import BleakScanner, BLEDevice, AdvertisementData
-if platform.system() == "Linux":
-    from bleak.assigned_numbers import AdvertisementDataType
-    from bleak.backends.bluezdbus.scanner import BlueZScannerArgs
-    from bleak.backends.bluezdbus.advertisement_monitor import OrPattern
+from bleak.assigned_numbers import AdvertisementDataType
+from bleak.backends.bluezdbus.scanner import BlueZScannerArgs
+from bleak.backends.bluezdbus.advertisement_monitor import OrPattern
 from . import print_line, reporting_mode, sd_notifier, flores
 from .mqtt import start_mqtt, found_mqtt, send_mqtt
 from .xiaomi_parser import XiaomiBluetoothDeviceData
-
-if platform.system() == "Linux":
-    # or_patterns is a workaround for the fact that passive scanning
-    # needs at least one matcher to be set. The below matcher
-    # will match all devices.
-    PASSIVE_SCANNER_ARGS = BlueZScannerArgs(
-        or_patterns=[
-            OrPattern(0, AdvertisementDataType.FLAGS, b"\x06"),
-            OrPattern(0, AdvertisementDataType.FLAGS, b"\x1a"),
-        ]
-    )
-
 
 CLOCK_MONOTONIC_COARSE = 6
 devices = {}
@@ -36,9 +21,7 @@ unnamed_devices = {}
 
 def get_time() -> float:
     """Gets coarse monotonic time"""
-    if sys.platform != "win32":
-        return time.clock_gettime(CLOCK_MONOTONIC_COARSE)
-    return time.monotonic()
+    return time.clock_gettime(CLOCK_MONOTONIC_COARSE)
 
 
 async def process_device(device: BLEDevice, data: AdvertisementData):
@@ -76,8 +59,8 @@ async def process_device(device: BLEDevice, data: AdvertisementData):
                     sensor_update = await flora.data.async_poll(device)
                     if len(sensor_update.entity_values):
                         flora["last_poll"] = get_time()
-                        if(old_fw!=flora.data.firmware):
-                            # when we get the fw version update the 
+                        if old_fw != flora.data.firmware:
+                            # when we get the fw version update the
                             # mqtt announcement
                             found_mqtt(flora["name_pretty"], flora)
                 send_mqtt(flora["name_pretty"], flora)
@@ -93,13 +76,16 @@ async def main():
 
     sd_notifier.notify('READY=1')
 
-    scanner_kwargs: dict[str, Any] = {"detection_callback": process_device}
-    scanner_kwargs["scanning_mode"] = "passive"
-    if platform.system() == "Linux":
-        if scanner_kwargs["scanning_mode"] == "passive":
-            scanner_kwargs["bluez"] = PASSIVE_SCANNER_ARGS
-
-    async with BleakScanner(**scanner_kwargs) as scanner:
+    # or_patterns is a workaround for the fact that passive scanning
+    # needs at least one matcher to be set. The below matcher
+    # will match all devices.
+    async with BleakScanner(process_device, scanning_mode="passive",
+                            bluez=dict(
+                                or_patterns=[
+                                    (0, AdvertisementDataType.FLAGS, b"\x06"),
+                                    (0, AdvertisementDataType.FLAGS, b"\x1a"),
+                                ])
+                            ) as scanner:
         print_line("Starting BLE passive scanner...", sd_notify=True)
         await scanner.start()
         print_line("BLE passive scanner started.", sd_notify=True)
